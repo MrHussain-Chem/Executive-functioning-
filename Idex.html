@@ -1,0 +1,147 @@
+import { useState } from “react”;
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from “recharts”;
+
+const questions = [
+{ id: 1, label: “Working Memory”, scores: [2,8,5,4,7,3,6,5,4,3,6,7,8] },
+{ id: 2, label: “Sustained Attention”, scores: [5,3,8,1,5,7,7,7,5,5,4,2,2] },
+{ id: 3, label: “Response Inhibition”, scores: [2,6,6,3,4,4,7,7,5,2,2,8,4] },
+{ id: 4, label: “Flexibility”, scores: [9,7,9,4,3,8,8,7,6,6,5,9,3] },
+{ id: 5, label: “Task Initiation”, scores: [5,8,5,6,4,4,4,6,2,10,1,1,5] },
+{ id: 6, label: “Emotional Control”, scores: [9,6,4,5,4,8,4,8,7,4,8,5,2] },
+{ id: 7, label: “Goal Directed Persistence”, scores: [2,7,4,5,8,1,7,7,7,2,9,9,8] },
+{ id: 8, label: “Metacognition”, scores: [7,8,1,7,8,5,6,7,6,6,5,3,5] },
+{ id: 9, label: “Planning & Prioritisation”, scores: [1,6,4,3,5,8,9,9,6,1,9,9,8] },
+{ id: 10, label: “Organisation”, scores: [5,10,10,8,7,4,9,9,2,3,4,6,10] },
+{ id: 11, label: “Time Management”, scores: [3,3,9,3,5,1,7,7,7,1,10,9,6] },
+];
+
+const COLORS = [
+“#FF6384”,”#FF9F40”,”#FFCD56”,”#4BC0C0”,”#36A2EB”,
+“#9966FF”,”#FF6384”,”#C9CBCF”,”#4BC0C0”,”#FF9F40”
+];
+
+function stats(scores) {
+const avg = scores.reduce((a,b)=>a+b,0)/scores.length;
+const variance = scores.reduce((a,b)=>a+(b-avg)**2,0)/scores.length;
+const std = Math.sqrt(variance);
+const range = Math.max(…scores) - Math.min(…scores);
+return { avg: +avg.toFixed(2), std: +std.toFixed(2), range };
+}
+
+function getPieData(scores) {
+const counts = {};
+scores.forEach(s => { counts[s] = (counts[s]||0)+1; });
+return Object.entries(counts).sort((a,b)=>+a[0]-+b[0]).map(([val,count])=>({
+name: `Score ${val}`, value: count
+}));
+}
+
+export default function App() {
+const [selected, setSelected] = useState(0);
+
+const allStats = questions.map(q => ({ …q, …stats(q.scores) }));
+
+// Areas of concern = lowest averages
+const ranked = […allStats].sort((a,b)=>a.avg-b.avg);
+const top3Concern = ranked.slice(0,3);
+
+// Most diverse = highest std deviation
+const mostDiverse = […allStats].sort((a,b)=>b.std-a.std)[0];
+
+const q = allStats[selected];
+const pieData = getPieData(q.scores);
+
+return (
+<div style={{fontFamily:“sans-serif”, padding:“16px”, maxWidth:“900px”, margin:“0 auto”}}>
+<h2 style={{textAlign:“center”, color:”#2c3e50”}}>SEND Personal Profiling — Questionnaire 1</h2>
+<p style={{textAlign:“center”, color:”#666”, fontSize:“13px”}}>13 Key Stage 4 Students | Scores 1–10</p>
+
+```
+  {/* Summary Cards */}
+  <div style={{display:"flex", gap:"12px", flexWrap:"wrap", marginBottom:"20px"}}>
+    {/* Areas of Concern */}
+    <div style={{flex:"1", minWidth:"220px", background:"#fff3f3", border:"1px solid #f5c6c6", borderRadius:"10px", padding:"14px"}}>
+      <h3 style={{margin:"0 0 10px", color:"#c0392b", fontSize:"15px"}}>⚠️ Top 3 Areas of Concern</h3>
+      {top3Concern.map((q,i)=>(
+        <div key={q.id} style={{marginBottom:"8px"}}>
+          <strong style={{color:"#c0392b"}}>#{i+1} Q{q.id}: {q.label}</strong>
+          <div style={{fontSize:"13px", color:"#555"}}>Average: {q.avg}/10 | Range: {q.range}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Most Diverse */}
+    <div style={{flex:"1", minWidth:"220px", background:"#f0f4ff", border:"1px solid #b3c2f5", borderRadius:"10px", padding:"14px"}}>
+      <h3 style={{margin:"0 0 10px", color:"#2980b9", fontSize:"15px"}}>📊 Most Diverse Responses</h3>
+      <strong style={{color:"#2980b9"}}>Q{mostDiverse.id}: {mostDiverse.label}</strong>
+      <div style={{fontSize:"13px", color:"#555", marginTop:"6px"}}>
+        Std Dev: {mostDiverse.std} | Range: {mostDiverse.range}<br/>
+        Scores: {mostDiverse.scores.join(", ")}
+      </div>
+      <div style={{fontSize:"12px", color:"#777", marginTop:"6px"}}>
+        Highest spread indicates most disagreement among students about this skill
+      </div>
+    </div>
+
+    {/* All averages */}
+    <div style={{flex:"1", minWidth:"220px", background:"#f0fff4", border:"1px solid #a9dfbf", borderRadius:"10px", padding:"14px"}}>
+      <h3 style={{margin:"0 0 10px", color:"#27ae60", fontSize:"15px"}}>📋 All Question Averages</h3>
+      {allStats.map(q=>(
+        <div key={q.id} style={{fontSize:"13px", display:"flex", justifyContent:"space-between", marginBottom:"3px"}}>
+          <span>Q{q.id}: {q.label.length>18?q.label.slice(0,18)+"…":q.label}</span>
+          <span style={{fontWeight:"bold", color: q.avg<4?"#c0392b":q.avg<6?"#e67e22":"#27ae60"}}>{q.avg}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* Pie Chart Selector */}
+  <div style={{background:"#fff", border:"1px solid #ddd", borderRadius:"10px", padding:"16px"}}>
+    <h3 style={{margin:"0 0 12px", color:"#2c3e50"}}>Score Distribution — Pie Charts</h3>
+    <div style={{display:"flex", flexWrap:"wrap", gap:"8px", marginBottom:"16px"}}>
+      {questions.map((q,i)=>(
+        <button key={q.id} onClick={()=>setSelected(i)}
+          style={{padding:"6px 10px", borderRadius:"6px", border:"none", cursor:"pointer", fontSize:"12px",
+            background: selected===i ? "#2980b9":"#eee", color: selected===i?"white":"#333", fontWeight: selected===i?"bold":"normal"}}>
+          Q{q.id}
+        </button>
+      ))}
+    </div>
+
+    <div style={{textAlign:"center", marginBottom:"8px"}}>
+      <strong style={{color:"#2c3e50"}}>Q{q.id}: {q.label}</strong>
+      <span style={{color:"#888", fontSize:"13px", marginLeft:"12px"}}>Avg: {q.avg} | Std Dev: {q.std} | Range: {q.range}</span>
+    </div>
+
+    <div style={{display:"flex", flexWrap:"wrap", gap:"16px", alignItems:"center"}}>
+      <ResponsiveContainer width="100%" height={280}>
+        <PieChart>
+          <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({name,value})=>`${name} (${value})`}>
+            {pieData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
+          </Pie>
+          <Tooltip/>
+          <Legend/>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+
+    <div style={{marginTop:"10px", background:"#f9f9f9", borderRadius:"8px", padding:"10px", fontSize:"13px"}}>
+      <strong>Individual scores:</strong> {q.scores.join(", ")}
+    </div>
+  </div>
+
+  {/* Qualitative notes */}
+  <div style={{marginTop:"16px", background:"#fffdf0", border:"1px solid #f0e68c", borderRadius:"10px", padding:"14px", fontSize:"13px"}}>
+    <strong>📝 Qualitative Notes from Data Collection:</strong>
+    <ul style={{margin:"8px 0 0", paddingLeft:"20px"}}>
+      <li>Q2 (Sustained Attention): Some students said it <em>depends if interesting</em></li>
+      <li>Q6 (Emotional Control): Some students admitted they are <em>"very lazy"</em></li>
+      <li>Q8 (Metacognition): Some students said it <em>depends on complexity of skill</em></li>
+      <li>Q10 (Organisation): For 1 student, they only take their iPad and PE kit</li>
+    </ul>
+  </div>
+</div>
+```
+
+);
+}
